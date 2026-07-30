@@ -40,7 +40,7 @@ public class ClaudeVisionService {
 
     public ClaudeVisionService(
             @Value("${app.claude.api-key}") String apiKey,
-            @Value("${app.claude.model:claude-sonnet-4-20250514}") String model,
+            @Value("${app.claude.model:claude-sonnet-4-5-20250929}") String model,
             ObjectMapper objectMapper) {
         this.apiKey = apiKey;
         this.model = model;

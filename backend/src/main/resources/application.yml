@@ -14,7 +14,7 @@ spring:
 app:
   claude:
     api-key: ${ANTHROPIC_API_KEY:}
-    model: claude-sonnet-4-20250514
+    model: claude-sonnet-4-5-20250929
   ffmpeg:
     binary: ${FFMPEG_BINARY:ffmpeg}
     ffprobe-binary: ${FFPROBE_BINARY:ffprobe}
