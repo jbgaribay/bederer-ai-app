@@ -60,7 +60,10 @@ services:
     runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
-    staticPublishPath: ./frontend/dist
+    # Relative to rootDir (frontend), not the repo root - the build actually
+    # runs from inside frontend/, so vite's output lands at frontend/dist,
+    # which from that working directory is just ./dist.
+    staticPublishPath: ./dist
     envVars:
       - key: VITE_API_BASE_URL
         value: https://bedererai-backend.onrender.com/api
