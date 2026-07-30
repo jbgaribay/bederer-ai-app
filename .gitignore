@@ -9,3 +9,6 @@ frontend/dist/
 
 # OS
 .DS_Store
+
+# Local secrets - never commit real values
+.env
