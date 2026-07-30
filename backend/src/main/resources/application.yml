@@ -18,7 +18,12 @@ app:
   ffmpeg:
     binary: ${FFMPEG_BINARY:ffmpeg}
     ffprobe-binary: ${FFPROBE_BINARY:ffprobe}
-    timeout-seconds: 30
+    # Render's free tier CPU is much slower/more contended than a local
+    # machine or a paid instance - 30s was too tight even before the
+    # readAllBytes()-before-waitFor ordering bug in FrameExtractionService
+    # was fixed (see that class). Override via FFMPEG_TIMEOUT_SECONDS if
+    # this still isn't enough headroom.
+    timeout-seconds: ${FFMPEG_TIMEOUT_SECONDS:60}
   upload:
     max-file-size-mb: 500
   rate-limit:

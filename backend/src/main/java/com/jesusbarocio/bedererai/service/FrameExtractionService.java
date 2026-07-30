@@ -6,7 +6,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -108,18 +111,43 @@ public class FrameExtractionService {
         builder.redirectErrorStream(true);
         Process process = builder.start();
 
-        String output = new String(process.getInputStream().readAllBytes());
+        // Drain stdout/stderr on a background thread instead of blocking the
+        // main thread on readAllBytes() before checking the timeout below.
+        // readAllBytes() only returns once the process closes its output
+        // stream (i.e. once it exits) - calling it first meant the timeout
+        // check below never actually got a chance to fire on a slow/stuck
+        // process, since we'd already be blocked waiting for output. This
+        // matters a lot on a resource-constrained host (e.g. Render's free
+        // tier), where ffmpeg can legitimately take much longer than it does
+        // locally.
+        StringBuilder output = new StringBuilder();
+        Thread outputReader = new Thread(() -> {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append('\n');
+                }
+            } catch (IOException ignored) {
+                // Stream closes/breaks when the process exits or is destroyed.
+            }
+        });
+        outputReader.setDaemon(true);
+        outputReader.start();
 
         boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
         if (!finished) {
             process.destroyForcibly();
             throw new AnalysisFailedException("ffmpeg/ffprobe timed out after " + timeoutSeconds + "s", null);
         }
+
+        outputReader.join(2000);
+
         if (process.exitValue() != 0) {
             log.error("Command failed ({}): {}", String.join(" ", command), output);
             throw new AnalysisFailedException("ffmpeg/ffprobe exited with code " + process.exitValue(), null);
         }
-        return output;
+        return output.toString();
     }
 
     private void cleanupDirectory(Path dir) {
