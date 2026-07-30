@@ -1,0 +1,11 @@
+# Backend (Maven)
+backend/target/
+*.iml
+.idea/
+
+# Frontend (Node/Vite)
+frontend/node_modules/
+frontend/dist/
+
+# OS
+.DS_Store

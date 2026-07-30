@@ -1,0 +1,66 @@
+# Render Blueprint: provisions the Postgres database, the Spring Boot
+# backend, and the static React frontend in one shot.
+#
+# Deploy: push this repo to GitHub, then in the Render dashboard choose
+# "New" -> "Blueprint" and point it at the repo. Render finds this file
+# automatically. After the first sync, fill in the `sync: false` secrets
+# below in the dashboard (Render won't - and shouldn't - read secret values
+# out of a file that's committed to git).
+#
+# Service names below are deliberately fixed (bedererai-backend,
+# bedererai-frontend) because Render derives each service's *.onrender.com
+# URL directly from its name - that lets ALLOWED_ORIGINS and
+# VITE_API_BASE_URL be hardcoded correctly from the start, instead of a
+# chicken-and-egg problem where you need one service's URL before deploying
+# the other.
+
+databases:
+  - name: bedererai-db
+    plan: free
+    databaseName: bedererai
+    user: bedererai
+    # Free Render Postgres instances expire (and are deleted) 30 days after
+    # creation unless upgraded to a paid plan. Fine for demoing this to a
+    # recruiter over the next few weeks; if this needs to stay up longer,
+    # upgrade the plan before day 30.
+
+services:
+  - type: web
+    name: bedererai-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bedererai-db
+          property: connectionString
+        # This lands as postgres://user:password@host:port/database -
+        # RenderDatabaseUrlEnvironmentPostProcessor (in the backend source)
+        # rewrites that into spring.datasource.url/username/password at
+        # startup, since Spring Boot expects a jdbc:postgresql://... URL.
+      - key: ANTHROPIC_API_KEY
+        sync: false # set manually in the Render dashboard after first deploy
+      - key: DEMO_USERNAME
+        value: demo
+      - key: DEMO_PASSWORD
+        sync: false # set manually - this is the credential you hand a recruiter
+      - key: MAX_ANALYSES_PER_DAY
+        value: "20"
+      - key: ALLOWED_ORIGINS
+        value: https://bedererai-frontend.onrender.com
+      # DATASOURCE_IAM_AUTH is intentionally omitted - it defaults to false,
+      # so RdsIamDataSourceConfig (the AWS/ECS-only path) never activates here.
+
+  - type: web
+    name: bedererai-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://bedererai-backend.onrender.com/api

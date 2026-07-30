@@ -1,0 +1,73 @@
+spring:
+  profiles:
+    active: dev
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+
+app:
+  claude:
+    api-key: ${ANTHROPIC_API_KEY:}
+    model: claude-sonnet-4-20250514
+  ffmpeg:
+    binary: ${FFMPEG_BINARY:ffmpeg}
+    ffprobe-binary: ${FFPROBE_BINARY:ffprobe}
+    timeout-seconds: 30
+  upload:
+    max-file-size-mb: 500
+  rate-limit:
+    max-analyses-per-day: ${MAX_ANALYSES_PER_DAY:20}
+  demo:
+    username: ${DEMO_USERNAME:demo}
+    password: ${DEMO_PASSWORD:changeme}
+  cors:
+    # Comma-separated list, e.g. https://d123abc.cloudfront.net. Defaults to
+    # "*" for local dev; lock this down to the real frontend domain in prod.
+    allowed-origins: ${ALLOWED_ORIGINS:*}
+  datasource:
+    # When true, RdsIamDataSourceConfig takes over entirely and the
+    # spring.datasource.* block in the prod profile below is ignored - RDS
+    # auth tokens are generated at runtime instead of a static password.
+    # Leave false for docker-compose / a plain Postgres container.
+    iam-auth: ${DATASOURCE_IAM_AUTH:false}
+    host: ${DATABASE_HOST:}
+    port: ${DATABASE_PORT:5432}
+    name: ${DATABASE_NAME:bedererai}
+    username: ${DATABASE_USERNAME:bedererai}
+    region: ${AWS_REGION:us-east-2}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:h2:mem:bedererai;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/bedererai}
+    username: ${DATABASE_USERNAME:bedererai}
+    password: ${DATABASE_PASSWORD:bedererai}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
