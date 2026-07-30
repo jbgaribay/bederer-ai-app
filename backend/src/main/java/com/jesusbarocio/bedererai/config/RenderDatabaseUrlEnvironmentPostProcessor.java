@@ -52,7 +52,14 @@ public class RenderDatabaseUrlEnvironmentPostProcessor implements EnvironmentPos
         String username = parts[0];
         String password = parts.length > 1 ? parts[1] : "";
 
-        String jdbcUrl = "jdbc:postgresql://" + uri.getHost() + ":" + uri.getPort() + uri.getPath();
+        // URI.getPort() returns -1 when the URL has no explicit port (which
+        // is exactly what Render's connectionString looks like - it relies
+        // on the Postgres default rather than spelling out :5432). Without
+        // this fallback the JDBC URL ends up as ".../host:-1/database",
+        // which the driver rejects outright.
+        int port = uri.getPort() == -1 ? 5432 : uri.getPort();
+
+        String jdbcUrl = "jdbc:postgresql://" + uri.getHost() + ":" + port + uri.getPath();
 
         Map<String, Object> overrides = new HashMap<>();
         overrides.put("spring.datasource.url", jdbcUrl);
